@@ -146,7 +146,7 @@ export default function OverviewPage() {
         <div className="flex-1 min-w-0 space-y-5">
 
             {/* KPI Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {loading
                     ? Array.from({ length: 6 }).map((_, i) => <KpiSkeleton key={i} />)
                     : <>
