@@ -1,0 +1,20 @@
+{
+    "name": "analytics-dashboard-root",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "start":    "npm run build && concurrently --names \"API,WEB\" --prefix-colors \"cyan,magenta\" \"npm run api\" \"npm run serve\"",
+        "serve":    "cd frontend && NODE_OPTIONS='--max-old-space-size=256'  npm run start",
+        "build":    "cd frontend && NODE_OPTIONS='--max-old-space-size=1024' npm run build",
+        "api":      "cd backend  && python3 -m uvicorn main:app --port 8000 --host 127.0.0.1",
+
+        "pipeline": "python3 pipeline/create_sample_dataset.py && python3 pipeline/process_data.py",
+        "sample":   "python3 pipeline/create_sample_dataset.py",
+
+        "dev":      "echo 'NOTE: dev mode uses hot-reload and consumes more RAM. Use npm start for production mode.' && concurrently --names \"API,WEB\" --prefix-colors \"cyan,magenta\" \"npm run api\" \"npm run dev:web\"",
+        "dev:web":  "cd frontend && NODE_OPTIONS='--max-old-space-size=512' npm run dev"
+    },
+    "devDependencies": {
+        "concurrently": "^9.1.2"
+    }
+}
