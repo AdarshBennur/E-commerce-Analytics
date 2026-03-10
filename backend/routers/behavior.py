@@ -16,24 +16,11 @@ aggregation — raw rows are never pulled into Python memory.
 """
 
 import os
-import json
-import time
 from fastapi import APIRouter, Query
 from typing import Optional
 from db import query, table, get_table_path
 
 router = APIRouter(prefix="/api/behavior", tags=["behavior"])
-
-# region agent log
-_DBG_LOG = "/Users/adarsh/Dashboard/.cursor/debug-0dffb0.log"
-def _dbg(msg: str, data: dict, hypothesis: str):
-    entry = {"sessionId":"0dffb0","timestamp":int(time.time()*1000),"location":"behavior.py","message":msg,"data":data,"hypothesisId":hypothesis}
-    try:
-        with open(_DBG_LOG, "a") as f:
-            f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
-# endregion agent log
 
 _SESSION_SAMPLE_ROWS = 50_000   # reduced from 200k to keep memory under 256 MB limit
 
@@ -55,26 +42,10 @@ def get_behavior(
     # ── Session KPIs ──────────────────────────────────────────────────────────
     session_stats = {}
     try:
-        summary_path  = get_table_path("session_summary")
-        metrics_path  = get_table_path("session_metrics")
-        summary_exists = os.path.exists(summary_path)
-        metrics_exists = os.path.exists(metrics_path)
-        # region agent log
-        _dbg("session table existence check", {
-            "summary_path": summary_path,
-            "summary_exists": summary_exists,
-            "metrics_path": metrics_path,
-            "metrics_exists": metrics_exists,
-            "cwd": os.getcwd(),
-        }, "C")
-        # endregion agent log
-        if summary_exists:
+        if os.path.exists(get_table_path("session_summary")):
             rows = query(f"SELECT * FROM {table('session_summary')}")
             session_stats = rows[0] if rows else {}
-            # region agent log
-            _dbg("session_summary query result", {"rows_count": len(rows), "first_row": rows[0] if rows else None}, "D")
-            # endregion agent log
-        elif metrics_exists:
+        elif os.path.exists(get_table_path("session_metrics")):
             session_tbl = table("session_metrics")
             rows = query(f"""
                 SELECT
@@ -92,11 +63,8 @@ def get_behavior(
                 {where_clause}
             """)
             session_stats = rows[0] if rows else {}
-        # else: both tables missing
-    except Exception as e:
-        # region agent log
-        _dbg("session_stats exception", {"error": str(e)}, "B")
-        # endregion agent log
+        # else: both tables missing — session_stats stays as empty dict
+    except Exception:
         session_stats = {}
 
     # ── Sessions per user distribution ────────────────────────────────────────
@@ -158,15 +126,6 @@ def get_behavior(
     except Exception:
         segment_dist = []
 
-    # region agent log
-    _dbg("behavior endpoint returning", {
-        "session_stats_keys": list(session_stats.keys()) if session_stats else [],
-        "session_stats_empty": len(session_stats) == 0,
-        "sessions_distribution_len": len(sessions_distribution),
-        "hourly_len": len(hourly),
-        "segment_dist_len": len(segment_dist),
-    }, "E")
-    # endregion agent log
     return {
         "session_stats":        session_stats,
         "sessions_distribution": sessions_distribution,

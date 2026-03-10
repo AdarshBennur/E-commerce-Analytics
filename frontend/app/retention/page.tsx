@@ -32,7 +32,11 @@ function buildInsights(data: RetentionData): Insight[] {
 
     const w1 = wa.find(w => w.week_number === 1)?.avg_retention_pct
     const w4 = wa.find(w => w.week_number === 4)?.avg_retention_pct
-    const w8 = wa.find(w => w.week_number === 8)?.avg_retention_pct
+    // Use week 8 if available, otherwise fall back to the highest available week
+    const sorted = [...wa].sort((a, b) => b.week_number - a.week_number)
+    const wLastEntry = wa.find(w => w.week_number === 8) ?? sorted.find(w => w.week_number >= 5)
+    const wLast = wLastEntry?.avg_retention_pct
+    const wLastNum = wLastEntry?.week_number ?? 8
 
     if (w1 != null) {
         insights.push({
@@ -65,11 +69,11 @@ function buildInsights(data: RetentionData): Insight[] {
         })
     }
 
-    if (w8 != null) {
+    if (wLast != null) {
         insights.push({
-            text:      `8-week retention is ${w8.toFixed(1)}%. ${w8 > 5 ? 'Users retained at 8 weeks represent your most loyal segment.' : 'Very few users remain after 8 weeks — investing in long-term engagement programs could help.'}`,
-            metric:    'W8 Retention',
-            trend:     w8 > 5 ? 'up' : 'down',
+            text:      `Week ${wLastNum} retention is ${wLast.toFixed(1)}%. ${wLast > 5 ? `Users retained at week ${wLastNum} represent your most loyal segment.` : `Very few users remain after ${wLastNum} weeks — investing in long-term engagement programs could help.`}`,
+            metric:    `W${wLastNum} Retention`,
+            trend:     wLast > 5 ? 'up' : 'down',
         })
     }
 
@@ -86,7 +90,11 @@ export default function RetentionPage() {
     }, [])
 
     const cohorts  = Array.from(new Set((data?.cohort_matrix ?? []).map(r => r.cohort_week))).sort()
-    const maxWeeks = 9
+    // Derive column count from actual data so no empty trailing columns appear
+    const maxDataWeek = data?.cohort_matrix?.length
+        ? Math.max(...data.cohort_matrix.map(r => r.week_number))
+        : 8
+    const maxWeeks = maxDataWeek + 1
     const cellMap  = new Map<string, number>()
     data?.cohort_matrix?.forEach(r => cellMap.set(`${r.cohort_week}:${r.week_number}`, r.retention_pct))
     const sizeMap  = new Map<string, number>()
@@ -95,7 +103,11 @@ export default function RetentionPage() {
     const weekAvgs = data?.week_averages ?? []
     const w1 = weekAvgs.find(w => w.week_number === 1)?.avg_retention_pct
     const w4 = weekAvgs.find(w => w.week_number === 4)?.avg_retention_pct
-    const w8 = weekAvgs.find(w => w.week_number === 8)?.avg_retention_pct
+    // Use week 8 if the data reaches that far; otherwise use the highest available week (≥ 5)
+    const waSorted    = [...weekAvgs].sort((a, b) => b.week_number - a.week_number)
+    const w8Entry     = weekAvgs.find(w => w.week_number === 8) ?? waSorted.find(w => w.week_number >= 5)
+    const w8          = w8Entry?.avg_retention_pct
+    const w8WeekNum   = w8Entry?.week_number ?? 8
 
     const staticInsights = useMemo(() => (data ? buildInsights(data) : []), [data])
     const { insights }   = useInsights({
@@ -119,7 +131,7 @@ export default function RetentionPage() {
                         labelNode={<MetricTooltip {...METRIC_DEFINITIONS.retention} label="W1 Retention" />}
                     />
                     <KpiCard label="Week 4 Retention" value={w4 != null ? formatPct(w4) : '—'} sub="Active one month later"  icon={<Users className="w-4 h-4" />} accent="purple" />
-                    <KpiCard label="Week 8 Retention" value={w8 != null ? formatPct(w8) : '—'} sub="Active two months later" icon={<Users className="w-4 h-4" />} accent="green"  />
+                    <KpiCard label={`Week ${w8WeekNum} Retention`} value={w8 != null ? formatPct(w8) : '—'} sub={`Active after ${w8WeekNum} weeks`} icon={<Users className="w-4 h-4" />} accent="green"  />
                 </>}
             </div>
 
