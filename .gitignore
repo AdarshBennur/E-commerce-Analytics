@@ -28,7 +28,9 @@ yarn-error.log*
 # ─── Data & Analytics (large files — not tracked in git) ─────────────────
 data/
 data_sample/
-/analytics/
+# Commit all analytics parquet files except the 1.3 GB session_metrics table
+# (GitHub hard limit is 100 MB per file)
+/analytics/session_metrics.parquet
 
 # ─── OS / Editor ──────────────────────────────────────────────────────────
 .DS_Store

@@ -7,10 +7,13 @@ const nextConfig = {
 
     // ── API proxy ──────────────────────────────────────────────────────────────
     async rewrites() {
+        // In production (Vercel) set BACKEND_URL to the Render service URL.
+        // Locally it falls back to localhost:8000.
+        const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:8000'
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://localhost:8000/api/:path*',
+                destination: `${backendUrl}/api/:path*`,
             },
         ]
     },
